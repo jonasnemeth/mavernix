@@ -12,8 +12,6 @@
 #include <QSlider>
 #include <QVBoxLayout>
 
-#include <utility>
-
 #include "choices.hpp"
 #include "pane-parts.hpp"
 
@@ -99,19 +97,6 @@ DockPane::DockPane(Choices& choices, QWidget* parent) : QWidget(parent), choices
         place++;
     }
     form->addRow(word("menu_bar_show", "Show in the menu bar:"), items);
-
-    const auto blur_looks = choices.themeTable(QStringLiteral("blur"));
-    for (const auto& entry : {std::pair<const char*, const char*>("panel", "Blur behind the menu bar"),
-             std::pair<const char*, const char*>("dock", "Blur behind the Dock")})
-    {
-        const QString key = QLatin1String(entry.first);
-        auto* blur = new QCheckBox(word(key == QLatin1String("panel") ? "menu_bar_blur" : "dock_blur", entry.second));
-        const QVariant chosen = choices.value(QStringLiteral("blur"), key);
-        blur->setChecked(chosen.isValid() ? chosen.toBool() : blur_looks.value(key, false).toBool());
-        connect(blur, &QCheckBox::toggled, this,
-            [this, key](bool on) { this->choices.set(QStringLiteral("blur"), key, on); });
-        form->addRow(QString(), blur);
-    }
 
     // Hours as 13:00 or as 1:00 PM; the rest of the theme's format stays.
     const QString format = choices.value(QStringLiteral("panel"), QStringLiteral("clock_format")).toString();
