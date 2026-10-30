@@ -24,6 +24,10 @@ Item {
     property real pictureHeight: 0
     // Use only the picture's shape, painted in the text colour.
     property bool pictureTinted: false
+    // Tray programs supply full-colour as well as neutral icons. Inspect the
+    // rendered pixels whenever the source changes, retaining coloured artwork.
+    property bool pictureAutoTint: false
+    property bool pictureIsNeutral: false
     // Gap between text and picture; the text comes first.
     property real textGap: 0
 
@@ -99,16 +103,68 @@ Item {
         readonly property bool sized: title.pictureSource !== "" && title.pictureHeight > 0
         height: sized ? title.pictureHeight : implicitHeight
         width: sized ? title.pictureHeight : implicitWidth
-        sourceSize: sized ? Qt.size(title.pictureHeight, title.pictureHeight) : undefined
+        // Render scalable tray artwork above its display resolution so the
+        // tint pass retains antialiased edges at small panel sizes.
+        sourceSize: sized ? Qt.size(title.pictureHeight * 2, title.pictureHeight * 2) : undefined
+        smooth: true
+        mipmap: true
 
         // Whitened, then colourised, so soft edges keep their alpha. (A mask would
         // make every pixel fully in or out and leave jagged edges.)
-        layer.enabled: title.pictureTinted
+        layer.enabled: title.pictureTinted || (title.pictureAutoTint && title.pictureIsNeutral)
+        layer.smooth: true
+        layer.textureSize: Qt.size(Math.ceil(width * 2), Math.ceil(height * 2))
         layer.effect: MultiEffect {
             brightness: 1.0
             colorization: 1.0
             colorizationColor: title.inkColor
         }
+    }
+
+    Canvas {
+        id: iconProbe
+        width: 32
+        height: 32
+        opacity: 0
+        visible: title.pictureAutoTint
+        property string inspectedSource: ""
+
+        function inspect() {
+            title.pictureIsNeutral = false
+            if (inspectedSource !== "") unloadImage(inspectedSource)
+            inspectedSource = image.source.toString()
+            if (title.pictureAutoTint && inspectedSource !== "") {
+                loadImage(inspectedSource)
+                requestPaint()
+            }
+        }
+        onImageLoaded: requestPaint()
+        onPaint: {
+            if (!isImageLoaded(inspectedSource)) return
+            const context = getContext("2d")
+            context.clearRect(0, 0, width, height)
+            context.drawImage(inspectedSource, 0, 0, width, height)
+            const pixels = context.getImageData(0, 0, width, height).data
+            let opaqueWeight = 0
+            let colourWeight = 0
+            for (let i = 0; i < pixels.length; i += 4) {
+                const alpha = pixels[i + 3] / 255
+                if (alpha < 0.1) continue
+                opaqueWeight += alpha
+                const spread = Math.max(pixels[i], pixels[i + 1], pixels[i + 2])
+                             - Math.min(pixels[i], pixels[i + 1], pixels[i + 2])
+                if (spread > 20) colourWeight += alpha
+            }
+            title.pictureIsNeutral = opaqueWeight > 0 && colourWeight / opaqueWeight < 0.01
+        }
+        Connections {
+            target: image
+            function onSourceChanged() { iconProbe.inspect() }
+            function onStatusChanged() {
+                if (image.status === Image.Ready) iconProbe.inspect()
+            }
+        }
+        Component.onCompleted: inspect()
     }
 
     MouseArea {
