@@ -1,4 +1,4 @@
-// Status item: the system tray, coloured program icons and theme-coloured neutral icons.
+// Status item: the system tray, one icon per program in its own colours.
 // Pressing opens the program's menu if it has one, else activates it.
 
 import QtQuick
@@ -47,7 +47,6 @@ Row {
             visible: !tray.takenOver.includes(modelData.id)
 
             pictureTinted: false
-            pictureAutoTint: true
             pictureSource: modelData.icon
             pictureHeight: tray.statusLooks.icon_size ?? 16
 

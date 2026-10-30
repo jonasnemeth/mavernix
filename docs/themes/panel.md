@@ -71,10 +71,6 @@ alpha_threshold = 0.5
 User and desktop preferences take precedence. Opacity applies only to the
 panel background and Dock shelf; foreground text and icons keep their opacity.
 
-Neutral system-tray icons are detected from their pixels and painted with
-`panel.text_color` (or the highlighted title colour while open). Coloured
-program icons retain their artwork. Detection is refreshed with the icon source.
-
 The Desktop pane exposes `panel.translucent_menu_bar` (default true). Turning
 it off restores the original theme material at its original opacity and excludes
 the menu bar from compositor blur. Existing transparency in the theme artwork
